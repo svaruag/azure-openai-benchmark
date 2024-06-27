@@ -15,7 +15,7 @@ def main():
     sub_parsers = parser.add_subparsers()
 
     load_parser = sub_parsers.add_parser("load", help="Run load generation tool.")
-    load_parser.add_argument("-a", "--api-version", type=str, default="2023-05-15", help="Set OpenAI API version.")
+    load_parser.add_argument("-a", "--api-version", type=str, default="2024-04-01-preview", help="Set OpenAI API version.")
     load_parser.add_argument("-k", "--api-key-env", type=str, default="OPENAI_API_KEY", help="Environment variable that contains the API KEY.")
     load_parser.add_argument("-c", "--clients", type=int, default=20, help="Set number of parallel clients to use for load generation.")
     load_parser.add_argument("-n", "--requests", type=int, help="Number of requests for the load run. Default to 'until killed'.")
@@ -31,6 +31,7 @@ def main():
     load_parser.add_argument("--temperature", type=float, help="Request temperature.")
     load_parser.add_argument("--top-p", type=float, help="Request top_p.")
     load_parser.add_argument("-f", "--output-format", type=str, default="human", help="Output format.", choices=["jsonl", "human"])
+    load_parser.add_argument("-o", "--output-file", type=str, default=None, help="Path of the output file to write to.")
     load_parser.add_argument("-t", "--retry", type=str, default="none", help="Request retry strategy. See README for details", choices=["none", "exponential"])
     load_parser.add_argument("-e", "--deployment", type=str, help="Azure OpenAI deployment name.", required=True)
     load_parser.add_argument("api_base_endpoint", help="Azure OpenAI deployment base endpoint.", nargs=1)
@@ -38,7 +39,7 @@ def main():
 
     tokenizer_parser = sub_parsers.add_parser("tokenize", help="Text tokenization tool.")
     tokenizer_parser.add_argument(
-        "-m", "--model", type=str, help="Model to assume for tokenization.", 
+        "-m", "--model", type=str, help="Model to assume for tokenization.", default="microsoft/Phi-3-medium-4k-instruct",
         choices=[
             "gpt-4", "gpt-4-0314", "gpt-4-32k-0314", "gpt-4-0613", "gpt-4-32k-0613", 
             "gpt-3.5-turbo", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-16k-0613"], 

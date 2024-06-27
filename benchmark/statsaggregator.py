@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 
-from .oairequester import RequestStats
+from .request_stats import RequestStats
 
 
 class _Samples:
@@ -56,17 +56,19 @@ class _StatsAggregator(threading.Thread):
    generated_tokens = _Samples()
    utilizations = _Samples()
 
-   def __init__(self, clients:int, dump_duration:float=5, window_duration:float=60, json_output=False, *args,**kwargs):
+   def __init__(self, clients:int, dump_duration:float=5, window_duration:float=60, json_output=False, output_file=None, *args,**kwargs):
       """
       :param clients: number of clients used in testing
       :param dump_duration: duration in seconds to dump current aggregates.
       :param window_duration: duration of sliding window in second to consider for aggregation.
       :param json_output: whether to dump periodic stats as json or human readable.
+      :param output_file: file to write output to.
       """
       self.clients = clients
       self.dump_duration = dump_duration
       self.json_output = json_output
       self.window_duration = window_duration
+      self.output_file = output_file
 
       super(_StatsAggregator, self).__init__(*args, **kwargs)
 
@@ -180,6 +182,9 @@ class _StatsAggregator(threading.Thread):
                },
             }
             print(json.dumps(j), flush=True)
+            if self.output_file is not None:
+               with open(self.output_file, "a") as f:
+                  f.write(json.dumps(j) + "\n")
          else:
             print(f"{timestamp} rpm: {rpm:<5} processing: {processing_requests_count:<4} completed: {self.total_requests_count:<5} failures: {self.total_failed_count:<4} throttled: {self.throttled_count:<4} requests: {self.total_requests_count:<5} tpm: {tokens_per_minute:<6} ttft_avg: {ttft_avg:<6} ttft_95th: {ttft_95th:<6} tbt_avg: {tbt_avg:<6} tbt_95th: {tbt_95th:<6} e2e_avg: {e2e_latency_avg:<6} e2e_95th: {e2e_latency_95th:<6} util_avg: {util_avg:<6} util_95th: {util_95th:<6}", flush=True)
 

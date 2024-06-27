@@ -13,6 +13,8 @@ import wonderwords
 
 from .asynchttpexecuter import AsyncHTTPExecuter
 from .oairequester import OAIRequester
+from .amlrequester import AzureMLRequester
+from .vllm_requester import VLLMRequester
 from .oaitokenizer import num_tokens_from_messages
 from .ratelimiting import NoRateLimiter, RateLimiter
 from .statsaggregator import _StatsAggregator
@@ -49,8 +51,8 @@ class _RequestBuilder:
       body = {"messages":messages}
       if self.max_tokens is not None:
          body["max_tokens"] = self.max_tokens
-      if self.completions is not None:
-         body["n"] = self.completions
+      # if self.completions is not None:
+      #    body["n"] = self.completions
       if self.frequency_penalty is not None:
          body["frequency_penalty"] = self.frequency_penalty
       if self.presence_penalty is not None:
@@ -59,6 +61,7 @@ class _RequestBuilder:
          body["temperature"] = self.temperature
       if self.top_p is not None:
          body["top_p"] = self.top_p
+      
       return body, messages_tokens
 
 def load(args):
@@ -69,7 +72,9 @@ def load(args):
        sys.exit(1)
 
    api_key = os.getenv(args.api_key_env)
-   url = args.api_base_endpoint[0] + "/openai/deployments/" + args.deployment + "/chat/completions"
+   url = args.api_base_endpoint[0]
+   if "ml.azure.com" not in args.api_base_endpoint[0]:
+      url = args.api_base_endpoint[0] + "/openai/deployments/" + args.deployment + "/chat/completions"
    url += "?api-version=" + args.api_version
 
    rate_limiter = NoRateLimiter()
@@ -103,30 +108,37 @@ def load(args):
    _run_load(request_builder,
       max_concurrency=args.clients, 
       api_key=api_key,
+      deployment_name=args.deployment,
       url=url,
       rate_limiter=rate_limiter,
       backoff=args.retry=="exponential",
       request_count=args.requests,
       duration=args.duration,
       aggregation_duration=args.aggregation_window,
-      json_output=args.output_format=="jsonl")
+      json_output=args.output_format=="jsonl",
+      output_file=args.output_file)
 
 def _run_load(request_builder: Iterable[dict],
               max_concurrency: int, 
               api_key: str,
+              deployment_name: str,
               url: str,
               rate_limiter=None, 
               backoff=False,
               duration=None, 
               aggregation_duration=60,
               request_count=None,
-              json_output=False):
+              json_output=False,
+              output_file=None):
    aggregator = _StatsAggregator(
       window_duration=aggregation_duration,
       dump_duration=1, 
       clients=max_concurrency,
-      json_output=json_output)
-   requester = OAIRequester(api_key, url, backoff=backoff)
+      json_output=json_output,
+      output_file=output_file)
+   # requester = OAIRequester(api_key, url, backoff=backoff)
+   # requester = AzureMLRequester(api_key, deployment_name, url, backoff=backoff)
+   requester = VLLMRequester(url, deployment_name, backoff=backoff)
 
    async def request_func(session:aiohttp.ClientSession):
       nonlocal aggregator
